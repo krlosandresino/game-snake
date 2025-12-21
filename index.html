@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nokia 1100 Snake Elegance</title>
+    <style>
+        :root {
+            --screen-color: #94b510;
+            --snake-color: #050505;
+            --phone-bg: #2b2e33;
+        }
+
+        body {
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* Cuerpo del Nokia 1100 elegante */
+        #phone {
+            background: linear-gradient(145deg, #444, #111);
+            width: 320px;
+            height: 600px;
+            border-radius: 60px;
+            border: 4px solid #333;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Pantalla con efecto de cristal y rejilla */
+        #screen-outer {
+            margin-top: 50px;
+            background-color: #000;
+            padding: 12px;
+            border-radius: 15px;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        #screen-inner {
+            background-color: var(--screen-color);
+            width: 240px;
+            height: 240px;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.2);
+            overflow: hidden;
+            border: 2px solid #5a6d0a;
+        }
+
+        /* Brillo de la pantalla */
+        #screen-inner::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .score-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.1);
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a1a1a;
+            border-bottom: 1px solid rgba(0,0,0,0.2);
+        }
+
+        canvas { display: block; }
+
+        /* Teclado Neón */
+        #keypad {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .key {
+            width: 55px;
+            height: 45px;
+            background: #222;
+            border-radius: 15px;
+            border: 1px solid #444;
+            color: #39ff14; /* Verde neón de la imagen */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 0 #000, 0 0 10px rgba(57, 255, 20, 0.2);
+            transition: 0.1s;
+        }
+
+        .key:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #000;
+            background: #333;
+        }
+
+        .nokia-brand {
+            color: #555;
+            margin-top: 25px;
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="phone">
+    <div style="width: 50px; height: 5px; background: #222; margin-top: 20px; border-radius: 5px;"></div>
+    
+    <div id="screen-outer">
+        <div id="screen-inner">
+            <div class="score-bar">
+                <span>Score: <span id="score">0</span></span>
+                <span>Snake II</span>
+            </div>
+            <canvas id="game" width="240" height="215"></canvas>
+        </div>
+    </div>
+
+    <div class="nokia-brand">NOKIA</div>
+
+    <div id="keypad">
+        <div></div> <div class="key" onclick="setDir('UP')">▲</div> <div></div>
+        <div class="key" onclick="setDir('LEFT')">◀</div>
+        <div class="key" style="color: #ff3131;" onclick="location.reload()">✖</div>
+        <div class="key" onclick="setDir('RIGHT')">▶</div>
+        <div></div> <div class="key" onclick="setDir('DOWN')">▼</div> <div></div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreText = document.getElementById('score');
+
+    // Configuración Audio Retro (Web Audio API)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, duration) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square"; // Sonido 8-bit
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    let box = 10;
+    let score = 0;
+    let snake = [{x: 10 * box, y: 10 * box}];
+    let food = { x: Math.floor(Math.random()*24)*box, y: Math.floor(Math.random()*21)*box };
+    let d = "RIGHT";
+
+    document.addEventListener("keydown", (e) => {
+        if(e.keyCode == 37 && d != "RIGHT") d = "LEFT";
+        if(e.keyCode == 38 && d != "DOWN") d = "UP";
+        if(e.keyCode == 39 && d != "LEFT") d = "RIGHT";
+        if(e.keyCode == 40 && d != "UP") d = "DOWN";
+    });
+
+    function setDir(dir) {
+        if(dir == "LEFT" && d != "RIGHT") d = "LEFT";
+        if(dir == "UP" && d != "DOWN") d = "UP";
+        if(dir == "RIGHT" && d != "LEFT") d = "RIGHT";
+        if(dir == "DOWN" && d != "UP") d = "DOWN";
+    }
+
+    function draw() {
+        ctx.fillStyle = "#94b510";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Dibujar comida
+        ctx.fillStyle = "#050505";
+        ctx.fillRect(food.x, food.y, box, box);
+
+        // Dibujar serpiente
+        for(let i=0; i<snake.length; i++) {
+            ctx.fillStyle = "#050505";
+            ctx.fillRect(snake[i].x, snake[i].y, box, box);
+            // Rejilla interna
+            ctx.strokeStyle = "#94b510";
+            ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+        }
+
+        let headX = snake[0].x;
+        let headY = snake[0].y;
+
+        if(d == "LEFT") headX -= box;
+        if(d == "UP") headY -= box;
+        if(d == "RIGHT") headX += box;
+        if(d == "DOWN") headY += box;
+
+        // Atravesar paredes (Teletransporte)
+        if(headX < 0) headX = canvas.width - box;
+        else if(headX >= canvas.width) headX = 0;
+        if(headY < 0) headY = canvas.height - box;
+        else if(headY >= canvas.height) headY = 0;
+
+        // Si come
+        if(headX == food.x && headY == food.y) {
+            score++;
+            scoreText.innerText = score;
+            playTone(800, 0.05); // Bip agudo al comer
+            food = {
+                x: Math.floor(Math.random()*24)*box,
+                y: Math.floor(Math.random()*21)*box
+            };
+        } else {
+            snake.pop();
+        }
+
+        let newHead = {x: headX, y: headY};
+
+        // Game Over
+        if(collision(newHead, snake)) {
+            playTone(150, 0.5); // Tono grave al morir
+            clearInterval(game);
+            alert("GAME OVER\nScore: " + score);
+            location.reload();
+        }
+
+        snake.unshift(newHead);
+    }
+
+    function collision(head, array) {
+        for(let i=0; i<array.length; i++) {
+            if(head.x == array[i].x && head.y == array[i].y) return true;
+        }
+        return false;
+    }
+
+    let game = setInterval(draw, 80); // Velocidad clásica
+</script>
+</body>
+</html>
