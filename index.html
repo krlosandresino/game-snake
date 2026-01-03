@@ -19,6 +19,9 @@
             height: 100vh;
             margin: 0;
             font-family: 'Courier New', Courier, monospace;
+            /* Evita que se seleccione texto al presionar botones */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* Cuerpo del Nokia 1100 elegante */
@@ -35,7 +38,6 @@
             position: relative;
         }
 
-        /* Pantalla con efecto de cristal y rejilla */
         #screen-outer {
             margin-top: 50px;
             background-color: #000;
@@ -54,7 +56,6 @@
             border: 2px solid #5a6d0a;
         }
 
-        /* Brillo de la pantalla */
         #screen-inner::after {
             content: "";
             position: absolute;
@@ -76,7 +77,6 @@
 
         canvas { display: block; }
 
-        /* Teclado Neón */
         #keypad {
             margin-top: 40px;
             display: grid;
@@ -90,7 +90,7 @@
             background: #222;
             border-radius: 15px;
             border: 1px solid #444;
-            color: #39ff14; /* Verde neón de la imagen */
+            color: #39ff14;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -114,9 +114,7 @@
         }
     </style>
 </head>
-<body>
-
-<div id="phone">
+<body oncontextmenu="return false;"> <div id="phone">
     <div style="width: 50px; height: 5px; background: #222; margin-top: 20px; border-radius: 5px;"></div>
     
     <div id="screen-outer">
@@ -141,16 +139,36 @@
 </div>
 
 <script>
+    // --- MEDIDAS DE SEGURIDAD ---
+    // Bloquear F12 y Atajos de Inspección
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode == 123) { // F12
+            e.preventDefault();
+            return false;
+        }
+        if (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) { // Ctrl+Shift+I/J
+            e.preventDefault();
+            return false;
+        }
+        if (e.ctrlKey && e.keyCode == 85) { // Ctrl+U (Ver código fuente)
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Bloquear Clic Derecho (Doble capa)
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // --- LÓGICA DEL JUEGO SNAKE ---
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreText = document.getElementById('score');
 
-    // Configuración Audio Retro (Web Audio API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playTone(freq, duration) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = "square"; // Sonido 8-bit
+        osc.type = "square";
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         osc.connect(gain);
@@ -183,15 +201,12 @@
         ctx.fillStyle = "#94b510";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Dibujar comida
         ctx.fillStyle = "#050505";
         ctx.fillRect(food.x, food.y, box, box);
 
-        // Dibujar serpiente
         for(let i=0; i<snake.length; i++) {
             ctx.fillStyle = "#050505";
             ctx.fillRect(snake[i].x, snake[i].y, box, box);
-            // Rejilla interna
             ctx.strokeStyle = "#94b510";
             ctx.strokeRect(snake[i].x, snake[i].y, box, box);
         }
@@ -204,17 +219,15 @@
         if(d == "RIGHT") headX += box;
         if(d == "DOWN") headY += box;
 
-        // Atravesar paredes (Teletransporte)
         if(headX < 0) headX = canvas.width - box;
         else if(headX >= canvas.width) headX = 0;
         if(headY < 0) headY = canvas.height - box;
         else if(headY >= canvas.height) headY = 0;
 
-        // Si come
         if(headX == food.x && headY == food.y) {
             score++;
             scoreText.innerText = score;
-            playTone(800, 0.05); // Bip agudo al comer
+            playTone(800, 0.05);
             food = {
                 x: Math.floor(Math.random()*24)*box,
                 y: Math.floor(Math.random()*21)*box
@@ -225,9 +238,8 @@
 
         let newHead = {x: headX, y: headY};
 
-        // Game Over
         if(collision(newHead, snake)) {
-            playTone(150, 0.5); // Tono grave al morir
+            playTone(150, 0.5);
             clearInterval(game);
             alert("GAME OVER\nScore: " + score);
             location.reload();
@@ -243,7 +255,7 @@
         return false;
     }
 
-    let game = setInterval(draw, 80); // Velocidad clásica
+    let game = setInterval(draw, 80);
 </script>
 </body>
 </html>
